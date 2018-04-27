@@ -45,17 +45,46 @@ namespace modules {
    *  _NET_WM_VISIBLE_NAME
    */
   string active_window::title() const {
-    string title;
+      string title;
 
-    if (!(title = ewmh_util::get_wm_name(m_window)).empty()) {
-      return title;
-    } else if (!(title = ewmh_util::get_visible_name(m_window)).empty()) {
-      return title;
-    } else if (!(title = icccm_util::get_wm_name(m_connection, m_window)).empty()) {
-      return title;
-    } else {
-      return "";
+      if (!(title = ewmh_util::get_wm_name(m_window)).empty()) {
+          return title;
+      } else if (!(title = ewmh_util::get_visible_name(m_window)).empty()) {
+          return title;
+      } else if (!(title = icccm_util::get_wm_name(m_connection, m_window)).empty()) {
+          return title;
+      } else {
+          return "";
+      }
+  }
+
+  /**
+   * Get the wm_class
+   */
+  string active_window::wm_class() const {
+    string ret;
+    xcb_get_property_cookie_t cookie;
+    xcb_get_property_reply_t *reply;
+
+    cookie =xcb_get_property(m_connection, 0, m_window, XCB_ATOM_WM_CLASS, XCB_ATOM_STRING, 0, 1024);
+    reply = xcb_get_property_reply(m_connection, cookie, nullptr);
+    if (reply) {
+      auto *wm_class = static_cast<char *>(xcb_get_property_value(reply));
+
+      auto class_total_len = static_cast<size_t>(xcb_get_property_value_length(reply));
+      size_t class_class_offset = strnlen(wm_class, class_total_len)+1;
+      if (class_class_offset >= class_total_len) {
+        ret = wm_class;
+      } else {
+        ret = wm_class+class_class_offset;
+      }
     }
+    else {
+      ret = "";
+    }
+
+    free(reply);
+    return ret;
   }
 
   /**
@@ -123,6 +152,7 @@ namespace modules {
       m_label = m_statelabels.at(state::ACTIVE)->clone();
       m_label->reset_tokens();
       m_label->replace_token("%title%", m_active->title());
+      m_label->replace_token("%class%", m_active->wm_class());
     } else {
       m_label = m_statelabels.at(state::EMPTY)->clone();
     }

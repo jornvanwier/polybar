@@ -17,7 +17,8 @@ namespace modules {
     ~active_window();
 
     bool match(const xcb_window_t win) const;
-    string title() const;
+      string title() const;
+      string wm_class() const;
 
    private:
     xcb_connection_t* m_connection{nullptr};
